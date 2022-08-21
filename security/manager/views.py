@@ -125,13 +125,22 @@ class getAllUserApi(APIView):
     pagination_class = PageNumberPagination
     paginator = pagination_class()
     def get(self,request):
+
+        #recherche
         if(request.GET.get("value",None) is not None):
             val_ = request.GET.get("value",None)
             #users = User.objects.filter(email=val_)
-            users = User.objects.filter(Q(first_name__icontains=val_)|Q(email__icontains=val_)|Q(last_name__icontains=val_))
-            serializer = UserSerializer(users,many=True)
-            return Response(serializer.data,status=status.HTTP_200_OK)
+            users = self.paginator.paginate_queryset(User.objects.filter(Q(first_name__icontains=val_)|Q(email__icontains=val_)|Q(last_name__icontains=val_)),request,view=self)
+            serialized = UserSerializer(users,many=True)
+            return self.paginator.get_paginated_response(serialized.data)
 
+        #recupération des non admin (role agent)
+        if(request.GET.get("agent",None) is not None):
+            users = self.paginator.paginate_queryset(User.objects.filter(administrateur=None,is_staff=False),request,view=self) 
+            serialized = UserSerializer(users,many=True)
+            return self.paginator.get_paginated_response(serialized.data)
+
+        #recupération globale (role admin)
         users = self.paginator.paginate_queryset(User.objects.filter(is_staff=False),request,view=self) 
         serialized = UserSerializer(users,many=True)
         return self.paginator.get_paginated_response(serialized.data)
