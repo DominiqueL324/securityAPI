@@ -61,6 +61,7 @@ class RepresentationUser(serializers.RelatedField):
             "group":value.groups.all().first().name,
         }
         return result
+        
 
 class ClientSerializer(serializers.ModelSerializer):
     user = RepresentationUser(read_only=True,many=False)

@@ -3,6 +3,7 @@ from statistics import mode
 from django.db import models
 from django.contrib.auth.models import User
 from agent.models import Agent
+#from salarie.models import Salarie
 
 class Comptable(models.Model):
     nom_complet = models.CharField("Nom Complet",max_length=100)
@@ -57,12 +58,13 @@ class Passeur(models.Model):
         verbose_name = "Information Passeur"
 
 class Client(models.Model): 
-    statut = models.IntegerField("statut du client",null=True) 
+    statut = models.IntegerField("statut du client",null=True)
+    type = models.CharField('Type de client',max_length=30,default="particulier") 
     user = models.OneToOneField(User,on_delete=models.CASCADE,related_name="client",null=True)
-    adresse = models.CharField("Adresse",max_length=300,default=" ")
-    titre = models.CharField("Totre",max_length=20,default="Mr")
-    fonction = models.CharField("Fonction",max_length=30,default="Vide")
-    societe = models.CharField("Societe",max_length=100,default="Vide")
+    adresse = models.CharField("Adresse",max_length=300,default=" ",null=True)
+    titre = models.CharField("Totre",max_length=20,default="Mr",null=True)
+    fonction = models.CharField("Fonction",max_length=30,default="Vide",null=True)
+    societe = models.CharField("Societe",max_length=100,default="Vide",null=True)
     ref_societe = models.CharField("Référence de la société",max_length=100,null=True)
     email_agence = models.CharField("Email Agence",max_length=100,null=True)
     siret = models.CharField("SIRET",max_length=100,null=True)
@@ -74,7 +76,6 @@ class Client(models.Model):
     mobile = models.CharField("Societe",max_length=20,null=True)
     telephone_agence = models.CharField("Telephone Agence",max_length=50,null=True)
     code_client = models.CharField("Code client",max_length=50,null=True)
-    passeur = models.ForeignKey(Passeur,on_delete=models.CASCADE,related_name="passeurs_client",null=True)
     ref_comptable = models.OneToOneField(Comptable,on_delete=models.CASCADE,related_name="reference_comptable",null=True)
     ref_service_gestion = models.OneToOneField(ServiceGestion,on_delete=models.CASCADE,related_name="reference_service_gestion",null=True)
     info_concession = models.OneToOneField(Concession,on_delete=models.CASCADE,related_name="informations_concession",null=True)

@@ -54,7 +54,7 @@ class RoleManager(APIView):
                 serializer = AdministrateurSerializer(boy,many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
 
-            if us.groups.filter(name="Agent").exists():
+            if us.groups.filter(name="Agent secteur").exists():#changement ici "Agent secteur"
                 boy = Agent.objects.filter(user=us)
                 serializer = AgentSerializer(boy,many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
@@ -64,7 +64,12 @@ class RoleManager(APIView):
                 serializer = SalarieSerializer(boy,many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             
-            if us.groups.filter(name="Client").exists():
+            if us.groups.filter(name="Client pro").exists():
+                boy = Client.objects.filter(user=us)
+                serializer = ClientSerializer(boy,many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            
+            if us.groups.filter(name="Client particulier").exists():
                 boy = Client.objects.filter(user=us)
                 serializer = ClientSerializer(boy,many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)

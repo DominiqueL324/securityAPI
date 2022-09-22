@@ -1,7 +1,9 @@
 from cmath import e
+from http import client
 from django.shortcuts import render
 from .models import Salarie
 from agent.models import Agent
+from client.models import Client
 from .serializer import SalarieSerializer
 from rest_framework.views import APIView
 from rest_framework.authentication import  TokenAuthentication
@@ -15,6 +17,7 @@ from django.db import transaction, IntegrityError
 from django.contrib.auth.models import User, Group
 from datetime import date, datetime,time,timedelta
 from rest_framework.response import Response
+from django.http import JsonResponse
 from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
 
 
@@ -32,14 +35,27 @@ class SalarieApi(APIView):
 
     def get(self,request):
 
+        if (request.GET.get("paginated",None) is not None and request.GET.get("client",None) is not None):
+            client = Client.objects.filter(pk=int(request.GET.get("client",None)))
+            if client.exists:
+                salarie = Salarie.objects.filter(client=int(request.GET.get('client')))
+                serializer = SalarieSerializer(salarie,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+            return JsonResponse({"status":"no client"},status=401)
+
+        if(request.GET.get("client",None) is not None):
+            client = Client.objects.filter(pk=int(request.GET.get("client",None)))
+            if client.exists:
+                salarie = self.paginator.paginate_queryset(Salarie.objects.filter(client=int(request.GET.get('client'))),request,view=self)
+                serializer = SalarieSerializer(salarie,many=True)
+                return self.paginator.get_paginated_response(serializer.data)
+            return JsonResponse({"status":"no client"},status=401)
+
         if(request.GET.get("paginated",None) is not None):
             salarie = Salarie.objects.all()
             serializer = SalarieSerializer(salarie,many=True)
             return Response(serializer.data,status=status.HTTP_200_OK)
-        """page = self.paginate_queryset(self.queryset)
-        if page is not None:
-            serializer = self.serializer_class(page, many=True)
-            return self.get_paginated_response(serializer.data)"""
+   
         salarie = self.paginator.paginate_queryset(self.queryset,request,view=self)
         serializer = SalarieSerializer(salarie,many=True)
         return self.paginator.get_paginated_response(serializer.data)
@@ -69,6 +85,7 @@ class SalarieApi(APIView):
                 fonction =  data['fonction'],
                 telephone =  data['telephone'],
                 mobile =  data['mobile'],
+                client = Client.objects.filter(pk=int(data['client'])).first(), 
                 agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
             )
             salarie = Salarie.objects.filter(pk=salarie.id)
@@ -132,6 +149,7 @@ class SalarieApiDetails(APIView):
                 salarie.fonction =  data['fonction']
                 salarie.telephone =  data['telephone']
                 salarie.mobile =  data['mobile']
+                salarie.client = Client.objects.filter(pk=int(data['client'])).first()
                 salarie.agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
                 salarie.save()
                 salarie = Salarie.objects.filter(pk=id)

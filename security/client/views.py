@@ -3,6 +3,8 @@ from pydoc import cli
 from django.shortcuts import render
 
 from agent.models import Agent
+from salarie.models import Salarie
+from salarie.serializer import SalarieSerializer
 from .models import Client,Comptable,Concession,ServiceGestion
 from .serializer import ClientSerializer
 from rest_framework.views import APIView
@@ -79,12 +81,15 @@ class ClientApi(APIView):
             user.first_name = data['prenom']
             user.last_name = data['nom']
             user.email = data['email_reponsable']
+
             user.username = login
             user.is_active = True
             user.set_password(mdp)
             user.save()
-            user.groups.add(Group.objects.filter(name="Client").first().id)
-            user.save()
+            if int(data['type']) == 1:
+                user.groups.add(Group.objects.filter(name="Client pro").first().id)
+            else:
+                user.groups.add(Group.objects.filter(name="Client particulier").first().id)
 
             """comptable = Comptable.objects.create(
                 nom_complet = data['nom_complet_comptable'],
@@ -110,10 +115,15 @@ class ClientApi(APIView):
                 origine_client = data['origine_client'],
                 suivie_technique_client = data['suivie_technique_client']
             )"""
-
+            type_ =""
+            if int(data['type']) == 1:
+                type_="professionnel"
+            else:
+                type_="particulier"
             client = Client.objects.create(
                 user = user,
                 adresse = data['adresse'],
+                type = type_,
                 #statut = data['statut_client'],
                 #titre = data['titre'],
                 #fonction = data['fonction'],
@@ -165,7 +175,15 @@ class ClientApiDetails(APIView):
         client = Client.objects.filter(pk=id)
         if client.exists():
             serializer = ClientSerializer(client,many=True)
-            return Response(serializer.data,status=status.HTTP_200_OK)
+            final_ = serializer.data
+            client = client.first()
+            if client.type != "particulier":
+                salarie = Salarie.objects.filter(client=client)
+                serializer_sal = SalarieSerializer(salarie,many=True)
+                sal = serializer_sal.data
+                final_[0]['passeur']=sal
+
+            return Response(final_,status=status.HTTP_200_OK)
         return Response({"status":"none"}, status=status.HTTP_204_NO_CONTENT)
 
     def put(self,request,id):
@@ -183,10 +201,6 @@ class ClientApiDetails(APIView):
 
             with transaction.atomic():
                 user = client.user
-                #comptable = client.ref_comptable
-                #service = client.ref_service_gestion
-                #concession = client.info_concession
-
                 user.first_name = data['prenom']
                 user.last_name = data['nom']
                 user.email = data['email_reponsable']
@@ -197,23 +211,53 @@ class ClientApiDetails(APIView):
 
                 if request.POST.get('mdp',None) is not None:  
                     user.set_password(data['mdp'])
-                user.save()
-                user.groups.add(Group.objects.filter(name="Client").first().id)
-                user.save()
+                
+                user.groups.remove(Group.objects.filter(name="Client pro").first().id)
+                user.groups.remove(Group.objects.filter(name="Client particulier").first().id)
 
-                comptable = Comptable.objects.create(
-                    nom_complet = data['nom_complet_comptable'],
-                    email_envoi_facture = data['email_envoi_facture'],
-                    telephone = data['telephone_comptable'],
-                    mobile = data['mobile_comptable']
-                )
-
-                service = ServiceGestion.objects.create(
-                    nom_complet = data['nom_complet_contact'],
-                    email = data['email_service_gestion'],
-                    telephone = data['telephone_service_gestion'],
-                    mobile = data['mobile_service_gestion']
-                )
+                if int(data['type']) == 1:
+                    user.groups.add(Group.objects.filter(name="Client pro").first().id)
+                else:
+                    user.groups.add(Group.objects.filter(name="Client particulier").first().id)
+                    
+                user.save()
+                #user.groups.add(Group.objects.filter(name="Client").first().id)
+                user.save()
+                #changement ici
+                if int(data['type']) == 1:
+                    comptable = Comptable.objects.create(
+                        nom_complet = data['nom_complet_comptable'],
+                        email_envoi_facture = data['email_envoi_facture'],
+                        telephone = data['telephone_comptable'],
+                        mobile = data['mobile_comptable']
+                    )
+                    service = ServiceGestion.objects.create(
+                        nom_complet = data['nom_complet_contact'],
+                        email = data['email_service_gestion'],
+                        telephone = data['telephone_service_gestion'],
+                        mobile = data['mobile_service_gestion']
+                    )
+                    client.ref_comptable = comptable
+                    client.ref_service_gestion = service
+                    client.fonction = data['fonction']
+                    client.societe = data['societe']
+                    client.ref_societe = data['ref_societe']
+                    client.email_agence = data['email_agence']
+                    client.siret = data['siret']
+                    client.tva_intercommunautaire = data['tva_intercommunautaire']
+                    client.type = "professionnel"
+                    client.code_client = data['code_client']
+                else:
+                    client.code_client = None
+                    client.ref_comptable = None
+                    client.ref_service_gestion = None
+                    client.fonction = None
+                    client.societe = None
+                    client.ref_societe = None
+                    client.email_agence = None
+                    client.siret = None
+                    client.tva_intercommunautaire = None
+                    client.type = "particulier"
 
                 concession = Concession.objects.create(
                     agent_rattache = Agent.objects.filter(pk=int(data['agent_rattache'])).first(),
@@ -226,47 +270,16 @@ class ClientApiDetails(APIView):
                     suivie_technique_client = data['suivie_technique_client']
                 )
 
-                """comptable.nom_complet = data['nom_complet_comptable']
-                comptable.email_envoi_facture = data['email_envoi_facture']
-                comptable.telephone = data['telephone_comptable']
-                comptable.mobile = data['mobile_comptable']
-                comptable.save()
-
-                service.nom_complet = data['nom_complet_contact']
-                service.email = data['email_service_gestion']
-                service.telephone = data['telephone_service_gestion']
-                service.mobile = data['mobile_service_gestion']
-                service.save()
-
-                concession.agent_rattache = Agent.objects.filter(pk=int(data['agent_rattache'])).first()
-                concession.agence_secteur_rattachement = data['agence_secteur_rattachement']
-                concession.nom_concessionnaire = data['nom_concessionnaire']
-                concession.numero_proposition_prestation = data['numero_proposition_prestation']
-                concession.nom_complet = data['nom_concessionnaire']
-                concession.as_client = data['as_client']
-                concession.origine_client = data['origine_client']
-                concession.suivie_technique_client = data['suivie_technique_client']
-                concession.save()"""
-
                 client.user = user
                 client.statut = data['statut_client']
                 client.adresse = data['adresse']
                 client.titre = data['titre']
-                client.fonction = data['fonction']
-                client.societe = data['societe']
-                client.ref_societe = data['ref_societe']
-                client.email_agence = data['email_agence']
-                client.siret = data['siret']
-                client.tva_intercommunautaire = data['tva_intercommunautaire']
                 client.complement_adresse = data['complement_adresse']
                 client.code_postal = data['code_postal']
                 client.ville = data['ville']
                 client.telephone = data['telephone']
                 client.mobile = data['mobile']
                 client.telephone_agence = data['telephone_agence']
-                client.code_client = data['code_client']
-                client.ref_comptable = comptable
-                client.ref_service_gestion = service
                 client.info_concession = concession
                 client.save()
                 client = Client.objects.filter(pk=id)

@@ -34,9 +34,21 @@ class RepresentationAgent(serializers.RelatedField):
         }
         return result
 
+class RepresentationClientser(serializers.RelatedField):
+    def to_representation(self, value):
+        result = {
+            "nom":value.user.last_name,
+            "prenom": value.user.first_name,
+            "email":value.user.email,
+            "type":value.user.groups.all().first().name,
+            "id":value.id,
+        }
+        return result
+
 class SalarieSerializer(serializers.ModelSerializer):
     user = RepresentationUser(read_only=True,many=False)
     agent_rattache = RepresentationAgent(read_only=True,many=False)
+    client = RepresentationClientser(read_only=True,many=False)
     class Meta:
         model= Salarie
         fields = '__all__'

@@ -1,7 +1,9 @@
+import imp
 from re import M
 from statistics import mode
 from django.db import models
 from agent.models import Agent
+from client.models import Client
 from django.contrib.auth.models import User
 
 
@@ -12,6 +14,7 @@ class Salarie(models.Model):
     fonction = models.CharField("Fonction",max_length=300,null=False,default="")
     telephone = models.CharField('Téléphone', max_length=20, null=True)
     mobile = models.CharField('Mobile', max_length=20,null=True)
+    client = models.ForeignKey(Client,on_delete=models.CASCADE,related_name="client_pro_rattache",null=True)
     agent_rattache = models.ForeignKey(Agent,on_delete=models.CASCADE,related_name="agent_rattache",null=True)
 
     def __str__(self):

@@ -59,7 +59,14 @@ class AgentApi(APIView):
             user.set_password(data['mdp'])
             user.is_active = True
             user.save()
-            user.groups.add(Group.objects.filter(name="Agent").first().id)
+
+            if data['role'] == 1:
+                user.groups.add(Group.objects.filter(name="Agent secteur").first().id)
+            elif data['role']== 2:
+                user.groups.add(Group.objects.filter(name="Agent constat").first().id)
+            else:
+                user.groups.add(Group.objects.filter(name="Audit planneur").first().id)
+
             user.save()
             admin = Agent.objects.create(
                 user = user,
@@ -122,7 +129,14 @@ class AgentApiDetails(APIView):
                 user.is_active = data['is_active']
                 if data['mdp'] is not None:
                     user.set_password(data['mdp'])
-                user.groups.add(Group.objects.filter(name="Agent").first().id)
+
+                if data['role'] == 1:
+                    user.groups.add(Group.objects.filter(name="Agent secteur").first().id)
+                elif data['role']== 2:
+                    user.groups.add(Group.objects.filter(name="Agent constat").first().id)
+                else:
+                    user.groups.add(Group.objects.filter(name="Audit planneur").first().id)
+                    
                 user.save()
                 admin.updated_at = datetime.today()
                 admin.trigramme = data['trigramme']
