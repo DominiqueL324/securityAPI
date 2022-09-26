@@ -23,4 +23,5 @@ urlpatterns = [
     path('salarie_app/',include('salarie.url')),
     path('client_app/',include('client.url')),
     path('manager_app/',include('manager.url')),
+    path('import_app/',include('import.url')),
 ]

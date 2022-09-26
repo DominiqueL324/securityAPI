@@ -1,5 +1,6 @@
 import email
 from email.message import EmailMessage
+from queue import Empty
 from unicodedata import name
 from django.shortcuts import render
 from rest_framework.response import Response
@@ -37,42 +38,94 @@ class RoleManager(APIView):
 
     def get(self,request):
         #user = Token.objects.filter(key=request.GET.get('token'))
-        odj_token = AccessToken(request.GET.get('token')) 
+        #user = Token.objects.filter(key=request.GET.get('token'))
+        odj_token = AccessToken(request.GET.get('token'))
         user = User.objects.filter(pk=int(odj_token['user_id']))
 
         if user.exists():
-            
+
             us = User.objects.filter(pk=user.first().id).first()
             if not us.is_active:
                 refresh_token = request.GET.get('token',None)
                 token = RefreshToken(refresh_token)
                 token.blacklist()
                 return Response({"status":" user not activated"},status=status.HTTP_403_FORBIDDEN)
-                 
+
             if us.groups.filter(name="Administrateur").exists():
                 boy = Administrateur.objects.filter(user=us)
                 serializer = AdministrateurSerializer(boy,many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                user = User.objects.filter(is_staff=False).count()
+                client = User.objects.filter(administrateur=None,agent=None,salarie=None,is_staff=False).count()
+                agent = User.objects.filter(administrateur=None,client=None,salarie=None,is_staff=False).count()
+                salarie = User.objects.filter(administrateur=None,client=None,agent=None,is_staff=False).count()
+                admin = User.objects.filter(salarie=None,client=None,agent=None,is_staff=False).count()
+                final_ = {
+                    "utilisateurs":user,
+                    "client":client,
+                    "agent":agent,
+                    "salarie":salarie,
+                    "admin":admin
+                }
+                data = serializer.data
+                data[0]["stats"] = final_
+                return Response(data, status=status.HTTP_200_OK)
 
-            if us.groups.filter(name="Agent secteur").exists():#changement ici "Agent secteur"
+            if us.groups.filter(name="Agent secteur").exists():
                 boy = Agent.objects.filter(user=us)
                 serializer = AgentSerializer(boy,many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                user = User.objects.filter(is_staff=False,administrateur=None).count()
+                client = User.objects.filter(administrateur=None,agent=None,salarie=None,is_staff=False).count()
+                agent = User.objects.filter(administrateur=None,client=None,salarie=None,is_staff=False).count()
+                salarie = User.objects.filter(administrateur=None,client=None,agent=None,is_staff=False).count()
+                final_ = {
+                    "utilisateurs":user,
+                    "client":client,
+                    "agent":agent,
+                    "salarie":salarie
+                }
+                data = serializer.data
+                data[0]["stats"] = final_
+                return Response(data, status=status.HTTP_200_OK)
+            
+            if us.groups.filter(name="Agent constat").exists():
+                boy = Agent.objects.filter(user=us)
+                serializer = AgentSerializer(boy,many=True)
+                client = User.objects.filter(administrateur=None,agent=None,salarie=None,is_staff=False).count()
+                salarie = User.objects.filter(administrateur=None,client=None,agent=None,is_staff=False).count()
+                final_ = {
+                    "client":client,
+                    "salarie":salarie
+                }
+                data = serializer.data
+                data[0]["stats"] = final_
+                return Response(data, status=status.HTTP_200_OK)
 
             if us.groups.filter(name="Salarie").exists():
                 boy = Salarie.objects.filter(user=us)
                 serializer = SalarieSerializer(boy,many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            
+                final_={}
+                data = serializer.data
+                data[0]["stats"] = final_
+                return Response(data, status=status.HTTP_200_OK)
+
             if us.groups.filter(name="Client pro").exists():
                 boy = Client.objects.filter(user=us)
                 serializer = ClientSerializer(boy,many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                salaries = Salarie.objects.filter(client=boy.first().id).count()
+                final_={
+                    "salarie":salaries,
+                }
+                data = serializer.data
+                data[0]["stats"] = final_
+                return Response(data, status=status.HTTP_200_OK)
             
             if us.groups.filter(name="Client particulier").exists():
                 boy = Client.objects.filter(user=us)
                 serializer = ClientSerializer(boy,many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                final_={}
+                data = serializer.data
+                data[0]["stats"] = final_
+                return Response(data, status=status.HTTP_200_OK)
 
         return Response({'status':'none'}, status=200)
     
@@ -135,18 +188,37 @@ class getAllUserApi(APIView):
         if(request.GET.get("value",None) is not None):
             val_ = request.GET.get("value",None)
             #users = User.objects.filter(email=val_)
-            users = self.paginator.paginate_queryset(User.objects.filter(Q(first_name__icontains=val_)|Q(email__icontains=val_)|Q(last_name__icontains=val_)),request,view=self)
+            user = User.objects.filter(Q(first_name__icontains=val_)|Q(email__icontains=val_)|Q(last_name__icontains=val_))
+            final_ = User.objects.none()
+            for us in user:
+                liste_ = us.groups.all()
+                if len(liste_)>=1:
+                    final_ = final_ | User.objects.filter(pk=us.id)
+                    
+            users = self.paginator.paginate_queryset(final_,request,view=self)
             serialized = UserSerializer(users,many=True)
             return self.paginator.get_paginated_response(serialized.data)
 
         #recupération des non admin (role agent)
         if(request.GET.get("agent",None) is not None):
-            users = self.paginator.paginate_queryset(User.objects.filter(administrateur=None,is_staff=False),request,view=self) 
+            user = User.objects.filter(administrateur=None,is_staff=False)
+            final_ = User.objects.none()
+            for us in user:
+                liste_ = us.groups.all()
+                if len(liste_)>=1:
+                    final_ = final_ | User.objects.filter(pk=us.id)
+            users = self.paginator.paginate_queryset(final_,request,view=self) 
             serialized = UserSerializer(users,many=True)
             return self.paginator.get_paginated_response(serialized.data)
 
         #recupération globale (role admin)
-        users = self.paginator.paginate_queryset(User.objects.filter(is_staff=False),request,view=self) 
+        user = User.objects.filter(is_staff=False)
+        final_ = User.objects.none()
+        for us in user:
+            liste_ = us.groups.all()
+            if len(liste_)>=1:
+                final_ = final_ | User.objects.filter(pk=us.id)
+        users = self.paginator.paginate_queryset(final_,request,view=self) 
         serialized = UserSerializer(users,many=True)
         return self.paginator.get_paginated_response(serialized.data)
 

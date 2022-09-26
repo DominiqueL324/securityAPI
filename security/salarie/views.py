@@ -85,9 +85,12 @@ class SalarieApi(APIView):
                 fonction =  data['fonction'],
                 telephone =  data['telephone'],
                 mobile =  data['mobile'],
-                client = Client.objects.filter(pk=int(data['client'])).first(), 
-                agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
+                client = Client.objects.filter(pk=int(data['client'])).first() 
+                #agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
             )
+            if request.POST.get("agent",None) is not None:
+                salarie.agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
+                salarie.save()
             salarie = Salarie.objects.filter(pk=salarie.id)
             serializer = SalarieSerializer(salarie,many=True)
             return Response(serializer.data,status= status.HTTP_201_CREATED)
@@ -140,7 +143,7 @@ class SalarieApiDetails(APIView):
                 user.email = data['email']
                 user.is_active = data['is_active']
                 user.username = data['login']
-                if data['mdp'] is not None:
+                if request.POST.get('mdp',None) is not None:
                     user.set_password(data['mdp'])
                 user.groups.add(Group.objects.filter(name="Salarie").first().id)
                 user.save()
@@ -150,7 +153,8 @@ class SalarieApiDetails(APIView):
                 salarie.telephone =  data['telephone']
                 salarie.mobile =  data['mobile']
                 salarie.client = Client.objects.filter(pk=int(data['client'])).first()
-                salarie.agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
+                if request.POST.get("mdp",None) is not None:
+                    salarie.agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
                 salarie.save()
                 salarie = Salarie.objects.filter(pk=id)
                 serializer= SalarieSerializer(salarie,many=True)
