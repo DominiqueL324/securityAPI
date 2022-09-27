@@ -99,6 +99,16 @@ class RoleManager(APIView):
                 data = serializer.data
                 data[0]["stats"] = final_
                 return Response(data, status=status.HTTP_200_OK)
+            
+            if us.groups.filter(name="Audit planneur").exists():
+                boy = Agent.objects.filter(user=us)
+                serializer = AgentSerializer(boy,many=True)
+                final_ = {
+                    "client":0,
+                }
+                data = serializer.data
+                data[0]["stats"] = final_
+                return Response(data, status=status.HTTP_200_OK)
 
             if us.groups.filter(name="Salarie").exists():
                 boy = Salarie.objects.filter(user=us)

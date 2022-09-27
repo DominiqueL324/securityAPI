@@ -86,7 +86,6 @@ class SalarieApi(APIView):
                 telephone =  data['telephone'],
                 mobile =  data['mobile'],
                 client = Client.objects.filter(pk=int(data['client'])).first() 
-                #agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
             )
             if request.POST.get("agent",None) is not None:
                 salarie.agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()

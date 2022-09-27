@@ -1,3 +1,4 @@
+from ast import In
 from http import client
 from pydoc import cli
 from django.shortcuts import render
@@ -22,6 +23,7 @@ from rest_framework.response import Response
 from salarie.views import checkifExist,checkifExistEmail,checkUsername
 import datetime, random, string
 from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 
 # Create your views here.
@@ -37,14 +39,46 @@ class ClientApi(APIView):
 
     def get(self,request):
         #page = self.paginate_queryset(self.queryset)
+
+        if(request.GET.get("token",None) is not None):
+            odj_token = AccessToken(request.GET.get('token'))
+            user = User.objects.filter(pk=int(odj_token['user_id'])).first()
+            
+            ag = Agent.objects.filter(user=user).first()
+            ifc = Concession.objects.filter(agent_rattache=ag)
+            final_ = Client.objects.none()
+            for ik in ifc:
+                cl = Client.objects.filter(info_concession=ik).first()
+                if cl.user.groups.filter(name="Client pro").exists() or cl.user.groups.filter(name="Client particulier").exists():
+                    final_ = final_ | Client.objects.filter(pk=cl.id)
+                    
+            if (request.GET.get("paginated",None) is not None):
+                client = self.paginator.paginate_queryset(final_,request,view=self)
+                serializer = ClientSerializer(client,many=True)
+                return self.paginator.get_paginated_response(serializer.data)
+            
+            serializer = ClientSerializer(final_,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+
+        client = Client.objects.all()
         if(request.GET.get("paginated",None) is not None):
-            client = Client.objects.all()
-            serializer = ClientSerializer(client,many=True)
+            final_ = Client.objects.none()
+            for cl in client:
+                if cl.user.groups.filter(name="Client pro").exists() or cl.user.groups.filter(name="Client particulier").exists():
+                    final_ = final_ | Client.objects.filter(pk=cl.id)
+            serializer = ClientSerializer(final_,many=True)
             return Response(serializer.data,status=status.HTTP_200_OK)
         """if page is not None:
             serializer = self.serializer_class(page, many=True)
             return self.get_paginated_response(serializer.data)"""
-        client = self.paginator.paginate_queryset(self.queryset,request,view=self)
+
+        
+
+        final_ = Client.objects.none()
+        for cl in client:
+            if cl.user.groups.filter(name="Client pro").exists() or cl.user.groups.filter(name="Client particulier").exists():
+                final_ = final_ | Client.objects.filter(pk=cl.id)
+        client = self.paginator.paginate_queryset(final_,request,view=self)
         serializer = ClientSerializer(client,many=True)
         return self.paginator.get_paginated_response(serializer.data)
 

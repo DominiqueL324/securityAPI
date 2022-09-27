@@ -66,9 +66,9 @@ class AgentApi(APIView):
             user.is_active = True
             user.save()
 
-            if data['role'] == 1:
+            if int(data['role']) == 1:
                 user.groups.add(Group.objects.filter(name="Agent secteur").first().id)
-            elif data['role']== 2:
+            elif int(data['role'])== 2:
                 user.groups.add(Group.objects.filter(name="Agent constat").first().id)
             else:
                 user.groups.add(Group.objects.filter(name="Audit planneur").first().id)
@@ -136,9 +136,9 @@ class AgentApiDetails(APIView):
                 if data['mdp'] is not None:
                     user.set_password(data['mdp'])
 
-                if data['role'] == 1:
+                if int(data['role']) == 1:
                     user.groups.add(Group.objects.filter(name="Agent secteur").first().id)
-                elif data['role']== 2:
+                elif int(data['role']) == 2:
                     user.groups.add(Group.objects.filter(name="Agent constat").first().id)
                 else:
                     user.groups.add(Group.objects.filter(name="Audit planneur").first().id)
