@@ -1,3 +1,4 @@
+import email
 from pydoc import cli
 from django.http.response import HttpResponse
 from django.shortcuts import render
@@ -78,11 +79,23 @@ class ImportApi(APIView):
                 user.last_name = liste[9]
                 user.username = liste[2]
                 user.set_password("france")
-                user.email = liste[8]
+                
                 user.is_active = int(liste[7])
                 user.last_login = last_log
                 user.date_joined = date_join
                 user.is_staff = False
+                us = User.objects.filter(email = liste[8])
+                if us.exists():
+                    i = 1
+                    email_ = liste[8]+"/"+str(i)
+                    use = User.objects.filter(email = email_)
+                    while use.exists():
+                        i = i+1
+                        email_ = liste[8]+"/"+str(i)
+                        use = User.objects.filter(email = email_)
+                    user.email = email_
+                else:
+                    user.email = liste[8]
                 user.save()
             if int(data_["cible"]) == 2:
 
@@ -111,7 +124,12 @@ class ImportApi(APIView):
                 )
             if int(data_["cible"]) == 3:
                     #return JsonResponse({"user":user.first_name})
-                if int(liste[1]) == 10:
+                ag = Agent.objects.all()
+                for a in ag:
+                    if not a.user.groups.filter(name="Agent secteur").exists() and not a.user.groups.filter(name="Agent constat").exists() and not a.user.groups.filter(name="Audit planneur").exists():
+                        a.user.groups.add(Group.objects.filter(name="Audit planneur").first().id)
+                        a.user.save()                       
+                """if int(liste[1]) == 10:
                     user = User.objects.filter(pk=int(liste[0])).first()
                     user.groups.add(Group.objects.filter(name="Agent secteur").first().id)
                     user.save()
@@ -124,97 +142,127 @@ class ImportApi(APIView):
                     user = User.objects.filter(pk=int(liste[0])).first()
                     user.groups.add(Group.objects.filter(name="Audit planneur").first().id)
                     user.save()
+                    #if not user.groups.filter(name="Agent secteur").exists():"""
+                        
                 
             if int(data_['cible']) == 4:
 
                 for u in range(37):
                     if liste[u] == "NULL":
                         liste[u] = None
-
-                compta = Comptable.objects.create(
-                    nom_complet = liste[21],
-                    email_envoi_facture = liste[22],
-                    telephone = liste[27],
-                    mobile =liste[28]
-                )
-
-                gestion = ServiceGestion.objects.create(
-                    nom_complet = liste[25],
-                    email = liste[26],
-                    telephone = liste[27],
-                    mobile = liste[28]
-                )
-
-                concession = Concession.objects.create(
-                    agence_secteur_rattachement = liste[29],
-                    nom_concessionnaire = liste[30],
-                    numero_proposition_prestation = liste[31],
-                    as_client =liste[33],
-                    origine_client = liste[34],
-                    suivie_technique_client = liste[35]
-                )
-                if liste[32] is not None:
-                    user_ = User.objects.filter(pk=int(liste[32])).first()
-                    concession.agent_rattache = Agent.objects.filter(user=user_).first()
-                concession.save()
-
-                client = Client.objects.create(
-                    id = liste[0],
-                    user = User.objects.filter(pk=int(liste[1])).first() ,
-                    adresse = liste[14],
-                    titre = liste[4],
-                    fonction = liste[8],
-                    societe = liste[9],
-                    ref_societe =liste[10],
-                    email_agence = liste[11],
-                    siret = liste[12],
-                    tva_intercommunautaire = liste[13],          
-                    complement_adresse = liste[15],
-                    code_postal = liste[16],
-                    ville = liste[17],
-                    telephone = liste[18],
-                    mobile = liste[19],
-                    telephone_agence = liste[20],
-                    code_client = liste[3],
-                    ref_comptable = compta,
-                    ref_service_gestion = gestion,
-                    info_concession = concession
-                )
-                created_at = ""
-                updated_at= ""
-                if type(liste[36]) != float:
-                    created_at=None
-                else:
-                    created_at = datetime(*xlrd.xldate_as_tuple(liste[36],data.datemode))
-
-                if type(liste[37]) != float:
-                    updated_at= datetime(2000, 5, 17,12,12)
-                else:
-                    updated_at = datetime(*xlrd.xldate_as_tuple(liste[37],data.datemode))
-                client.created_at = created_at
-                client.updated_at = updated_at
-                client.save()
-
-            if int(data_['cible']) == 5:
-                for u in range(37):
-                    if liste[u] == "NULL":
-                        liste[u] = None
                 if liste[2] is not None:
-                    if int(liste[2]) == 1:
-                        user = User.objects.filter(pk=int(liste[1])).first()
+                    compta = Comptable.objects.create(
+                        nom_complet = liste[21],
+                        email_envoi_facture = liste[22],
+                        telephone = liste[27],
+                        mobile =liste[28]
+                    )
+
+                    gestion = ServiceGestion.objects.create(
+                        nom_complet = liste[25],
+                        email = liste[26],
+                        telephone = liste[27],
+                        mobile = liste[28]
+                    )
+
+                    concession = Concession.objects.create(
+                        agence_secteur_rattachement = liste[29],
+                        nom_concessionnaire = liste[30],
+                        numero_proposition_prestation = liste[31],
+                        as_client =liste[33],
+                        origine_client = liste[34],
+                        suivie_technique_client = liste[35]
+                    )
+                    if liste[32] is not None:
+                        user_ = User.objects.filter(pk=int(liste[32])).first()
+                        concession.agent_rattache = Agent.objects.filter(user=user_).first()
+                    
+                    else:
+                        us = Agent.objects.filter(trigramme="Jonh Doe Max")
+                        if not us.exists():
+                            user_ = User()
+                            user_.first_name = "John"
+                            user_.last_name = "Doe"
+                            user_.username = "Doe11"
+                            user_.set_password("france")
+                            user_.email = "johndoe@gmail.com"
+                            user_.is_active = True
+                            user_.date_joined = datetime(2000, 5, 17,12,12)
+                            user_.is_staff = True
+                            user_.save()
+                            agent = Agent.objects.create(
+                                user = user_,
+                                trigramme = "Jonh Doe Max",
+                                created_at = datetime(2000, 5, 17,12,12),
+                                updated_at = datetime(2000, 5, 17,12,12)
+                            )
+                        concession.agent_rattache = Agent.objects.filter(trigramme="Jonh Doe Max").first()
+                    concession.save()
+
+
+                    client = Client.objects.create(
+                        id = liste[0],
+                        user = User.objects.filter(pk=int(liste[1])).first() ,
+                        adresse = liste[14],
+                        titre = liste[4],
+                        fonction = liste[8],
+                        societe = liste[9],
+                        ref_societe =liste[10],
+                        email_agence = liste[11],
+                        siret = liste[12],
+                        tva_intercommunautaire = liste[13],          
+                        complement_adresse = liste[15],
+                        code_postal = liste[16],
+                        ville = liste[17],
+                        telephone = liste[18],
+                        mobile = liste[19],
+                        telephone_agence = liste[20],
+                        code_client = liste[3],
+                        ref_comptable = compta,
+                        ref_service_gestion = gestion,
+                        info_concession = concession
+                    )
+                    created_at = ""
+                    updated_at= ""
+                    if type(liste[36]) != float:
+                        created_at=None
+                    else:
+                        created_at = datetime(*xlrd.xldate_as_tuple(liste[36],data.datemode))
+
+                    if type(liste[37]) != float:
+                        updated_at= datetime(2000, 5, 17,12,12)
+                    else:
+                        updated_at = datetime(*xlrd.xldate_as_tuple(liste[37],data.datemode))
+                    client.created_at = created_at
+                    client.updated_at = updated_at
+                    client.save()
+                    client = Client.objects.filter(pk=int(liste[0])).first()
+                    if client.siret is not None:
+                        user = User.objects.filter(client=client).first()
                         user.groups.add(Group.objects.filter(name="Client pro").first().id)
                         user.save()
-                        client = Client.objects.filter(pk=int(liste[0])).first()
                         client.type = "professionnel"
                         client.save()
-                if liste[2] is not None:
-                    if int(liste[2]) == 2:
-                        user = User.objects.filter(pk=int(liste[1])).first()
+                    else:
+                        user = User.objects.filter(client=client).first()
                         user.groups.add(Group.objects.filter(name="Client particulier").first().id)
                         user.save()
                         client = Client.objects.filter(pk=int(liste[0])).first()
                         client.type = "particulier"
                         client.save()
+                else:
+                    Us = User.objects.filter(pk=int(liste[1]))
+                    if Us.exists():
+                        Us = Us.first()
+                        Us.delete()
+                        
+            if int(data_['cible']) == 5:
+                for u in range(37):
+                    if liste[u] == "NULL":
+                        liste[u] = None
+                        
+
+                        
             if int(data_['cible']) == 6:
 
                 for u in range(15):

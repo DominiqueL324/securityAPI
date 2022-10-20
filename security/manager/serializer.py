@@ -16,12 +16,18 @@ class RepresentationClient(serializers.RelatedField):
     #je retourne juste l'attribut id de l'objet client
     #donc pas besoin de créer tout un objet JSON pour un seul attribut je le retourne directement
     def to_representation(self, value):
-        result = value.id
+        result = result = {
+            "id":value.id,
+            "societe": value.societe,
+        }
         return result
 
 class RepresentationSalarie(serializers.RelatedField):
     def to_representation(self, value):
-        result = value.id
+        result = {
+            "id":value.id,
+            "societe": value.client.societe,
+        }
         return result
 
 class RepresentationAgent(serializers.RelatedField):

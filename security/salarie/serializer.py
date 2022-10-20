@@ -15,6 +15,7 @@ class RepresentationUser(serializers.RelatedField):
             "email":value.email,
             "login":value.username,
             "id":value.id,
+            "is_active":value.is_active,
             "group":value.groups.all().first().name,
         }
         return result
@@ -42,6 +43,7 @@ class RepresentationClientser(serializers.RelatedField):
             "email":value.user.email,
             "type":value.user.groups.all().first().name,
             "id":value.id,
+            "societe":value.societe,
         }
         return result
 

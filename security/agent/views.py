@@ -32,16 +32,16 @@ class AgentApi(APIView):
         #page = self.paginate_queryset(self.queryset)
         if(request.GET.get("paginated",None) is not None):
             agent = Agent.objects.all()
-            final_ = Agent.objects.none()
-            for ag in agent:
-                if ag.user.groups.filter(name="Agent secteur").exists() or ag.user.groups.filter(name="Agent secteur").exists():
-                    final_ = final_ | Agent.objects.filter(pk=ag.id)
-            serializer = AgentSerializer(final_,many=True)
+            #final_ = Agent.objects.none()
+            #for ag in agent:
+                #if ag.user.groups.filter(name="Agent secteur").exists() or ag.user.groups.filter(name="Agent constat").exists() or ag.user.groups.filter(name="AUdit planneur").exists():
+                    #final_ = final_ | Agent.objects.filter(pk=ag.id)
+            serializer = AgentSerializer(agent,many=True)
             return Response(serializer.data,status=status.HTTP_200_OK)
         agent = Agent.objects.all()
         final_ = Agent.objects.none()
         for ag in agent:
-            if ag.user.groups.filter(name="Agent secteur").exists() or ag.user.groups.filter(name="Agent secteur").exists():
+            if ag.user.groups.filter(name="Agent secteur").exists() or ag.user.groups.filter(name="Agent constat").exists() or ag.user.groups.filter(name="AUdit planneur").exists():
                 final_ = final_ | Agent.objects.filter(pk=ag.id)
         agent = self.paginator.paginate_queryset(final_,request,view=self)
         serializer = AgentSerializer(agent,many=True)
@@ -53,17 +53,31 @@ class AgentApi(APIView):
         if checkUsername(data['login'],data['email'])== "ouiUs":
             return Response({"status":"existing username"},status=status.HTTP_204_NO_CONTENT)
 
-        if checkUsername(data['login'],data['email'])== "ouiEm":
-            return Response({"status":"existing email"},status=status.HTTP_204_NO_CONTENT)
+        #if checkUsername(data['login'],data['email'])== "ouiEm":
+            #return Response({"status":"existing email"},status=status.HTTP_204_NO_CONTENT)
 
         with transaction.atomic():
             user = User(is_superuser=False, is_active=True, is_staff=False)
             user.first_name = data['prenom']
             user.last_name = data['nom']
-            user.email = data['email']
+            #user.email = data['email']
             user.username = data['login']
             user.set_password(data['mdp'])
             user.is_active = True
+
+            us = User.objects.filter(email = data['email'])
+            if us.exists():
+                i = 1
+                email_ = data['email']+"/"+str(i)
+                use = User.objects.filter(email = email_)
+                while use.exists():
+                    i = i+1
+                    email_ = data['email']+"/"+str(i)
+                    use = User.objects.filter(email = email_)
+                user.email = email_
+            else:
+                user.email = data['email']
+
             user.save()
 
             if int(data['role']) == 1:
@@ -77,9 +91,20 @@ class AgentApi(APIView):
             admin = Agent.objects.create(
                 user = user,
                 trigramme = data['trigramme'],
+                telephone = data['telephone'],
                 adresse = data['adresse'],
                 created_at = datetime.today()
             )
+            if request.POST.get('secteur_primaire',None):
+                admin.secteur_primaire = data["secteur_primaire"]
+
+            if request.POST.get('secteur_secondaire',None):
+                admin.secteur_secondaire = data["secteur_secondaire"]
+            
+            if request.POST.get('agent_secteur',None):
+                admin.agent_secteur = data["agent_secteur"]
+            admin.save()
+
             admin = Agent.objects.filter(pk=admin.id)
             serializer = AgentSerializer(admin,many=True)
             return Response(serializer.data,status= status.HTTP_201_CREATED)
@@ -120,8 +145,8 @@ class AgentApiDetails(APIView):
         if admin.exists():
             admin = admin.first()
 
-            if checkifExistEmail(data['email'],admin.user.id) == 1:
-                return Response({"status":"existing email"}, status=status.HTTP_204_NO_CONTENT)
+            #if checkifExistEmail(data['email'],admin.user.id) == 1:
+                #return Response({"status":"existing email"}, status=status.HTTP_204_NO_CONTENT)
                 
             if checkifExist(data['login'],admin.user.id) == 1:
                 return Response({"status":"existing username"}, status=status.HTTP_204_NO_CONTENT)
@@ -130,10 +155,11 @@ class AgentApiDetails(APIView):
                 user = admin.user
                 user.first_name = data['prenom']
                 user.last_name = data['nom']
-                user.email = data['email']
+                #user.email = data['email']
                 user.username = data['login']
-                user.is_active = data['is_active']
-                if data['mdp'] is not None:
+                if request.POST.get('is_active',None):
+                    user.is_active = data['is_active']
+                if request.POST.get('mdp',None) is not None:
                     user.set_password(data['mdp'])
 
                 if int(data['role']) == 1:
@@ -142,12 +168,38 @@ class AgentApiDetails(APIView):
                     user.groups.add(Group.objects.filter(name="Agent constat").first().id)
                 else:
                     user.groups.add(Group.objects.filter(name="Audit planneur").first().id)
-                    
+                    #.views.py.swp"
+                us = User.objects.filter(email = data['email'])
+
+                if us.exists() and us.first().id != admin.user.id:
+                    i = 1
+                    email_ = data['email']+"/"+str(i)
+                    use = User.objects.filter(email = email_)
+                    while use.exists() and use.first().id != admin.user.id :
+                        i = i+1
+                        email_ = data['email']+"/"+str(i)
+                        use = User.objects.filter(email = email_)
+                    user.email = email_
+                else:
+                    user.email = data['email']
+
                 user.save()
                 admin.updated_at = datetime.today()
                 admin.trigramme = data['trigramme']
                 admin.adresse = data['adresse']
+                admin.telephone = data['telephone']
                 admin.save()
+
+                if request.POST.get('secteur_primaire',None):
+                    admin.secteur_primaire = data["secteur_primaire"]
+
+                if request.POST.get('secteur_secondaire',None):
+                    admin.secteur_secondaire = data["secteur_secondaire"]
+                
+                if request.POST.get('agent_secteur',None):
+                    admin.agent_secteur = data["agent_secteur"]
+                admin.save()
+
                 admin = Agent.objects.filter(pk=id)
                 serializer= AgentSerializer(admin,many=True)
                 return Response(serializer.data,status=status.HTTP_200_OK)

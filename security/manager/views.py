@@ -2,6 +2,7 @@ import email
 from email.message import EmailMessage
 from queue import Empty
 from unicodedata import name
+from urllib import request
 from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -29,6 +30,7 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from .serializer import UserSerializer
 from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
 from django.db.models import Q
+import datetime, random, string
 
 # Create your views here.
 class RoleManager(APIView):
@@ -244,5 +246,24 @@ class userStateAPI(APIView):
             user.save()
             return Response({"status":"done"},status=status.HTTP_200_OK)
         return Response({"status":"not found"},status=status.HTTP_204_NO_CONTENT)
+
+class backupPwd(APIView):
+    def get(self,request):
+        email = request.GET.get("email",None)
+        if email is not None:
+            us = User.objects.filter(email=email)
+            if us.exists():
+                serialized = UserSerializer(us,many=True)
+                return Response(serialized.data,status=status.HTTP_200_OK)
+        return Response({"status":"not found"},status=status.HTTP_204_NO_CONTENT)
+
+    def post(self,request):
+        data = request.data
+        us = User.objects.filter(email=data['email']).first()
+        pwd ="".join([random.choice(string.ascii_letters) for _ in range(10)]) 
+        us.set_password(pwd)
+        us.save()
+        return Response({"pass":pwd},status=status.HTTP_200_OK)
+
 
 

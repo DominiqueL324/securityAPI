@@ -88,8 +88,8 @@ class ClientApi(APIView):
             if checkUsername(data['login'],data['email_reponsable'])== "ouiUs":
                 return Response({"status":"existing username"},status=status.HTTP_204_NO_CONTENT)
 
-        if checkEmail(data['email_reponsable']) == 1:
-            return Response({"status":"existing email"},status=status.HTTP_204_NO_CONTENT)
+        #if checkEmail(data['email_reponsable']) == 1:
+            #return Response({"status":"existing email"},status=status.HTTP_204_NO_CONTENT)
 
 
         with transaction.atomic():
@@ -114,17 +114,31 @@ class ClientApi(APIView):
             user = User(is_superuser=False, is_active=True, is_staff=False)
             user.first_name = data['prenom']
             user.last_name = data['nom']
-            user.email = data['email_reponsable']
+            #user.email = data['email_reponsable']
 
             user.username = login
             user.is_active = True
             user.set_password(mdp)
+
+            us = User.objects.filter(email = data['email_reponsable'])
+            if us.exists():
+                i = 1
+                email_ = data['email_reponsable']+"/"+str(i)
+                use = User.objects.filter(email = email_)
+                while use.exists():
+                    i = i+1
+                    email_ = data['email_reponsable']+"/"+str(i)
+                    use = User.objects.filter(email = email_)
+                user.email = email_
+            else:
+                user.email = data['email_reponsable']
             user.save()
+
             if int(data['type']) == 1:
                 user.groups.add(Group.objects.filter(name="Client pro").first().id)
             else:
                 user.groups.add(Group.objects.filter(name="Client particulier").first().id)
-
+            user.save()
             """comptable = Comptable.objects.create(
                 nom_complet = data['nom_complet_comptable'],
                 email_envoi_facture = data['email_envoi_facture'],
@@ -139,16 +153,16 @@ class ClientApi(APIView):
                 mobile = data['mobile_service_gestion']
             )"""
 
-            """concession = Concession.objects.create(
+            concession = Concession.objects.create(
                 agent_rattache = Agent.objects.filter(pk=int(data['agent_rattache'])).first(),
-                agence_secteur_rattachement = data['agence_secteur_rattachement'],
-                nom_concessionnaire = data['nom_concessionnaire'],
-                numero_proposition_prestation = data['numero_proposition_prestation'],
-                nom_complet = data['nom_concessionnaire'],
-                as_client = data['as_client'],
-                origine_client = data['origine_client'],
-                suivie_technique_client = data['suivie_technique_client']
-            )"""
+                agence_secteur_rattachement = None,
+                nom_concessionnaire = None,
+                numero_proposition_prestation = None,
+                nom_complet = None,
+                as_client = None,
+                origine_client = None,
+                suivie_technique_client = None
+            )
             type_ =""
             if int(data['type']) == 1:
                 type_="professionnel"
@@ -175,7 +189,7 @@ class ClientApi(APIView):
                 code_client = code_client,
                 #ref_comptable = comptable,
                 #ref_service_gestion = service,
-                #info_concession = concession  
+                info_concession = concession  
             )
 
             client = Client.objects.filter(pk=client.id)
@@ -226,8 +240,8 @@ class ClientApiDetails(APIView):
         if client.exists():
             client = client.first()
 
-            if checkifExistEmail(data['email_reponsable'],client.user.id) == 1:
-                return Response({"status":"existing email"}, status=status.HTTP_204_NO_CONTENT)
+            #if checkifExistEmail(data['email_reponsable'],client.user.id) == 1:
+                #return Response({"status":"existing email"}, status=status.HTTP_204_NO_CONTENT)
 
             if request.POST.get('login',None) is not None:    
                 if checkifExist(data['login'],client.user.id) == 1:
@@ -237,8 +251,9 @@ class ClientApiDetails(APIView):
                 user = client.user
                 user.first_name = data['prenom']
                 user.last_name = data['nom']
-                user.email = data['email_reponsable']
-                user.is_active = data['is_active']
+                #user.email = data['email_reponsable']
+                if request.POST.get('is_active',None):
+                    user.is_active = data['is_active']
 
                 if request.POST.get('login',None) is not None:  
                     user.username = data['login']
@@ -253,6 +268,19 @@ class ClientApiDetails(APIView):
                     user.groups.add(Group.objects.filter(name="Client pro").first().id)
                 else:
                     user.groups.add(Group.objects.filter(name="Client particulier").first().id)
+
+                us = User.objects.filter(email = data['email_reponsable'])
+                if us.exists() and us.first().id != client.user.id:
+                    i = 1
+                    email_ = data['email_reponsable']+"/"+str(i)
+                    use = User.objects.filter(email = email_)
+                    while use.exists() and use.first().id != client.user.id :
+                        i = i+1
+                        email_ = data['email_reponsable']+"/"+str(i)
+                        use = User.objects.filter(email = email_)
+                    user.email = email_
+                else:
+                    user.email = data['email_reponsable']
                     
                 user.save()
                 #user.groups.add(Group.objects.filter(name="Client").first().id)
@@ -281,7 +309,9 @@ class ClientApiDetails(APIView):
                     client.tva_intercommunautaire = data['tva_intercommunautaire']
                     client.type = "professionnel"
                     client.code_client = data['code_client']
-                else:
+                elif int(data['type']) == 0:
+                    pass
+                else:    
                     client.code_client = None
                     client.ref_comptable = None
                     client.ref_service_gestion = None
@@ -294,27 +324,40 @@ class ClientApiDetails(APIView):
                     client.type = "particulier"
 
                 concession = Concession.objects.create(
-                    agent_rattache = Agent.objects.filter(pk=int(data['agent_rattache'])).first(),
-                    agence_secteur_rattachement = data['agence_secteur_rattachement'],
-                    nom_concessionnaire = data['nom_concessionnaire'],
-                    numero_proposition_prestation = data['numero_proposition_prestation'],
-                    nom_complet = data['nom_concessionnaire'],
-                    as_client = data['as_client'],
-                    origine_client = data['origine_client'],
-                    suivie_technique_client = data['suivie_technique_client']
+                    agence_secteur_rattachement = request.POST.get("agence_secteur_rattachement",None),
+                    nom_concessionnaire = request.POST.get("nom_concessionnaire",None),
+                    numero_proposition_prestation = request.POST.get("numero_proposition_prestation",None),
+                    nom_complet = request.POST.get("nom_concessionnaire",None),
+                    as_client = request.POST.get("as_client",None),
+                    origine_client = request.POST.get("origine_client",None),
+                    suivie_technique_client = request.POST.get("suivie_technique_client",None)
                 )
+                if request.POST.get("agent_rattache",None) is not None:
+                    concession.agent_rattache = Agent.objects.filter(pk=int(data['agent_rattache'])).first()
+                else:
+                    concession.agent_rattache = None
+                concession.save()
 
                 client.user = user
-                client.statut = data['statut_client']
-                client.adresse = data['adresse']
-                client.titre = data['titre']
-                client.complement_adresse = data['complement_adresse']
-                client.code_postal = data['code_postal']
-                client.ville = data['ville']
-                client.telephone = data['telephone']
-                client.mobile = data['mobile']
-                client.telephone_agence = data['telephone_agence']
-                client.info_concession = concession
+                if request.POST.get("statut_client",None) is not None:
+                    client.statut = data['statut_client']
+                if request.POST.get("adresse",None) is not None:
+                    client.adresse = data['adresse']
+                if request.POST.get("titre",None) is not None:
+                    client.titre = data['titre']
+                if request.POST.get("complement_adresse",None) is not None:
+                    client.complement_adresse = data['complement_adresse']
+                if request.POST.get("code_postal",None) is not None:
+                    client.code_postal = data['code_postal']
+                if request.POST.get("ville",None) is not None:
+                    client.ville = data['ville']
+                if request.POST.get("telephone",None) is not None:
+                    client.telephone = data['telephone']
+                if request.POST.get("mobile",None) is not None:    
+                    client.mobile = data['mobile']
+                if request.POST.get("telephone_agence",None) is not None:
+                    client.telephone_agence = request.POST.get('telephone_agence',None)
+                
                 client.save()
                 client = Client.objects.filter(pk=id)
 

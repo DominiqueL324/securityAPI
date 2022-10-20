@@ -65,17 +65,29 @@ class SalarieApi(APIView):
         if checkUsername(data['login'],data['email'])== "ouiUs":
             return Response({"status":"existing username"},status=status.HTTP_204_NO_CONTENT)
 
-        if checkUsername(data['login'],data['email'])== "ouiEm":
-            return Response({"status":"existing email"},status=status.HTTP_204_NO_CONTENT)
+        #if checkUsername(data['login'],data['email'])== "ouiEm":
+            #return Response({"status":"existing email"},status=status.HTTP_204_NO_CONTENT)
 
         with transaction.atomic():
             user = User(is_superuser=False, is_active=True, is_staff=False)
             user.first_name = data['prenom']
             user.last_name = data['nom']
-            user.email = data['email']
+            #user.email = data['email']
             user.username = data['login']
             user.is_active = True
             user.set_password(data['mdp'])
+            us = User.objects.filter(email = data['email'])
+            if us.exists():
+                i = 1
+                email_ = data['email']+"/"+str(i)
+                use = User.objects.filter(email = email_)
+                while use.exists():
+                    i = i+1
+                    email_ = data['email']+"/"+str(i)
+                    use = User.objects.filter(email = email_)
+                user.email = email_
+            else:
+                user.email = data['email']
             user.save()
             user.groups.add(Group.objects.filter(name="Salarie").first().id)
             user.save()
@@ -85,6 +97,8 @@ class SalarieApi(APIView):
                 fonction =  data['fonction'],
                 telephone =  data['telephone'],
                 mobile =  data['mobile'],
+                code =  data['code'],
+                adresse =  data['adresse'],
                 client = Client.objects.filter(pk=int(data['client'])).first() 
             )
             if request.POST.get("agent",None) is not None:
@@ -130,8 +144,8 @@ class SalarieApiDetails(APIView):
         
         if salarie.exists():
             salarie = salarie.first()
-            if checkifExistEmail(data['email'],salarie.user.id) == 1:
-                return Response({"status":"existing email"}, status=status.HTTP_204_NO_CONTENT)
+            #if checkifExistEmail(data['email'],salarie.user.id) == 1:
+                #return Response({"status":"existing email"}, status=status.HTTP_204_NO_CONTENT)
                 
             if checkifExist(data['login'],salarie.user.id) == 1:
                 return Response({"status":"existing username"}, status=status.HTTP_204_NO_CONTENT)
@@ -140,19 +154,37 @@ class SalarieApiDetails(APIView):
                 user.first_name = data['prenom']
                 user.last_name = data['nom']
                 user.email = data['email']
-                user.is_active = data['is_active']
+                if request.POST.get('is_active',None) is not None:
+                    user.is_active = data['is_active']
                 user.username = data['login']
                 if request.POST.get('mdp',None) is not None:
                     user.set_password(data['mdp'])
                 user.groups.add(Group.objects.filter(name="Salarie").first().id)
+
+                us = User.objects.filter(email = data['email'])
+                if us.exists():
+                    i = 1
+                    email_ = data['email']+"/"+str(i)
+                    use = User.objects.filter(email = email_)
+                    while use.exists() and use.first().id != salarie.user.id:
+                        email_ = data['email']+"/"+str(i)
+                        use = User.objects.filter(email = email_)
+                        i = i+1
+                    user.email = email_
+                else:
+                    user.email = data['email']
+
                 user.save()
                 salarie.updated_at = datetime.today()
                 salarie.titre =  data['titre']
                 salarie.fonction =  data['fonction']
                 salarie.telephone =  data['telephone']
                 salarie.mobile =  data['mobile']
-                salarie.client = Client.objects.filter(pk=int(data['client'])).first()
-                if request.POST.get("mdp",None) is not None:
+                salarie.code =  data['code']
+                salarie.adresse =  data['adresse']
+                if request.POST.get('client',None) is not None:
+                    salarie.client = Client.objects.filter(pk=int(data['client'])).first()
+                if request.POST.get("agent",None) is not None:
                     salarie.agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
                 salarie.save()
                 salarie = Salarie.objects.filter(pk=id)

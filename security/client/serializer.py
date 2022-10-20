@@ -48,6 +48,8 @@ class RepresentationConcession(serializers.RelatedField):
                 "email":value.agent_rattache.user.email,
                 "trigramme":value.agent_rattache.trigramme,
                 "id":value.agent_rattache.id,
+                "secteur": value.agent_rattache.secteur_primaire,
+                "secteur_secondaire": value.agent_rattache.secteur_secondaire
             }
         else:
             result['agent_rattache'] = None
@@ -63,6 +65,7 @@ class RepresentationUser(serializers.RelatedField):
             "login":value.username,
             "id":value.id,
             "group":value.groups.all().first().name,
+            "is_active":value.is_active
         }
         return result
         
