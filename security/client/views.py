@@ -220,7 +220,10 @@ class ClientApiDetails(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self,request,id):
-        client = Client.objects.filter(pk=id)
+        try:
+            client = Client.objects.filter(pk=id)
+        except:
+            return Response([{"status":"none"}], status=status.HTTP_200_OK)
         if client.exists():
             serializer = ClientSerializer(client,many=True)
             final_ = serializer.data
@@ -232,7 +235,7 @@ class ClientApiDetails(APIView):
                 final_[0]['passeur']=sal
 
             return Response(final_,status=status.HTTP_200_OK)
-        return Response({"status":"none"}, status=status.HTTP_204_NO_CONTENT)
+        return Response([{"status":"none"}], status=status.HTTP_200_OK)
 
     def put(self,request,id):
         data = request.data

@@ -272,7 +272,45 @@ class ImportApi(APIView):
                
                 user = User.objects.filter(pk=int(liste[1])).first()
                 user.groups.add(Group.objects.filter(name="Salarie").first().id)
+                sal = Salarie()
+                
                 user.save()
+                sal.user = user
+                sal.id = pk=int(liste[0])
+                if liste[5] == "Monsieur": 
+                    sal.titre = "M"
+                if liste[5] == "Madame": 
+                    sal.titre = "Me"
+                if liste[5] == "Mademoiselle": 
+                    sal.titre = "Mmll"
+                sal.company = liste[10]
+                sal.code = liste[4]
+                sal.telephone = liste[11]
+                sal.mobile = liste[12]
+                sal.created_at = liste[14]
+                sal.updated_at = liste[15]
+
+                ag = Agent.objects.filter(pk=int(liste[13]))
+                cl = Client.objects.filter(pk=int(liste[3]))
+
+                if type(liste[14]) != float:
+                    created_at= datetime(2000, 5, 17,12,12)
+                else:
+                    created_at = datetime(*xlrd.xldate_as_tuple(liste[14],data.datemode))
+                
+                if type(liste[15]) != float:
+                    updated_at= datetime(2000, 5, 17,12,12)
+                else:
+                    updated_at = datetime(*xlrd.xldate_as_tuple(liste[15],data.datemode))
+
+                sal.updated_at = updated_at
+                sal.created_at = created_at
+
+                if ag.exists():
+                    sal.agent_rattache = ag.first()
+                if cl.exists():
+                    sal.client = cl.first()
+                sal.save()
 
             #except Exception as e:
                 #return JsonResponse({"status":3},status=401)    

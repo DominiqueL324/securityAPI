@@ -132,11 +132,20 @@ class SalarieApiDetails(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self,request,id):
+
+        if request.GET.get("specific",None) is not None:
+            us = User.objects.filter(pk=id)
+            if us.exists():
+                sal = Salarie.objects.filter(user=us.first().id)
+                serializer = SalarieSerializer(sal,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+
         salarie = Salarie.objects.filter(pk=id)
         if salarie.exists():
             serializer = SalarieSerializer(salarie,many=True)
             return Response(serializer.data,status=status.HTTP_200_OK)
-        return Response({"status":"none"}, status=status.HTTP_204_NO_CONTENT)
+        
+        return Response([{"status":"none"}], status=status.HTTP_200_OK)
 
     def put(self,request,id):
         data = request.data

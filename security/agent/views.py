@@ -12,6 +12,7 @@ from rest_framework import status
 from django.db import transaction, IntegrityError
 from django.contrib.auth.models import User, Group
 from datetime import date, datetime,time,timedelta
+from manager.serializer import UserSerializer
 from rest_framework.response import Response
 from salarie.views import checkifExist,checkifExistEmail,checkUsername
 from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
@@ -133,11 +134,19 @@ class AgentApiDetails(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self,request,id):
+
+        if request.GET.get("specific",None) is not None:
+            us = User.objects.filter(pk=id)
+            if us.exists():
+                ag = Agent.objects.filter(user=us.first().id)
+                serializer = AgentSerializer(ag,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+
         admin = Agent.objects.filter(pk=id)
         if admin.exists():
             serializer = AgentSerializer(admin,many=True)
             return Response(serializer.data,status=status.HTTP_200_OK)
-        return Response({"status":"none"}, status=status.HTTP_204_NO_CONTENT)
+        return Response([{"status":"none"}], status=status.HTTP_200_OK)
 
     def put(self,request,id):
         data = request.data
