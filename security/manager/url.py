@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.views import APIView
 from . import views
-from .views import RoleManager, Logout, checkUsernameApi,getAllUserApi,userStateAPI,backupPwd
+from .views import RoleManager, Logout, checkUsernameApi,getAllUserApi,userStateAPI,backupPwd,getSingleUser
 from rest_framework.authtoken import views
 from rest_framework_simplejwt.views import(TokenObtainPairView, TokenRefreshView,TokenVerifyView)
 
@@ -15,6 +15,7 @@ urlpatterns = [
     path('viewset/role/', RoleManager.as_view()),
     path('viewset/checker/', checkUsernameApi.as_view()),
     path('viewset/users/', getAllUserApi.as_view()),
+    path('viewset/users/<int:id>', getSingleUser.as_view()),
     path('viewset/users/active/<int:id>', userStateAPI.as_view()),
     path('viewset/password/check/', backupPwd.as_view()),
 ]

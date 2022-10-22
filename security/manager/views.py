@@ -223,6 +223,23 @@ class getAllUserApi(APIView):
             serialized = UserSerializer(users,many=True)
             return self.paginator.get_paginated_response(serialized.data)
 
+        #recupération des non admin (role agent)
+        if(request.GET.get("client",None) is not None):
+            user = User.objects.filter(pk=int(request.GET.get("client")))
+            cl = Client.objects.filter(user=user.first().id)
+            sal = Salarie.objects.filter(client=cl.first().id)
+            user = User.objects.filter(salarie=sal.first())
+            #user = User.objects.filter(administrateur=None,is_staff=False,agent=None,client=None)
+            #final_ = User.objects.none()
+            #for us in user:
+                #liste_ = us.groups.all()
+                #if len(liste_)>=1:
+                    #sal = Salarie.objects.filter(client=Client.objects.filter(user=int))
+                    #final_ = final_ | User.objects.filter(salarie=sal.first().id)
+            users = self.paginator.paginate_queryset(user,request,view=self) 
+            serialized = UserSerializer(users,many=True)
+            return self.paginator.get_paginated_response(serialized.data)
+
         #recupération globale (role admin)
         user = User.objects.filter(is_staff=False)
         final_ = User.objects.none()
@@ -246,6 +263,18 @@ class userStateAPI(APIView):
             user.save()
             return Response({"status":"done"},status=status.HTTP_200_OK)
         return Response({"status":"not found"},status=status.HTTP_204_NO_CONTENT)
+
+
+class getSingleUser(APIView):
+
+    def get(self,request,id):
+        us = User.objects.filter(pk=int(id))
+        if us.exists():
+            serialized = UserSerializer(us,many=True)
+            return Response(serialized.data,status=status.HTTP_200_OK)
+        return Response([{"status":"not found"}],status=status.HTTP_200_OK)
+
+
 
 class backupPwd(APIView):
     def get(self,request):

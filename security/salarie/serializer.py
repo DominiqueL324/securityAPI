@@ -43,6 +43,8 @@ class RepresentationClientser(serializers.RelatedField):
             "email":value.user.email,
             "type":value.user.groups.all().first().name,
             "id":value.id,
+            "agent":value.info_concession.agent_rattache.id,
+            "agent_user":value.info_concession.agent_rattache.user.id,
             "societe":value.societe,
         }
         return result

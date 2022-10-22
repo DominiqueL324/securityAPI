@@ -48,6 +48,7 @@ class RepresentationConcession(serializers.RelatedField):
                 "email":value.agent_rattache.user.email,
                 "trigramme":value.agent_rattache.trigramme,
                 "id":value.agent_rattache.id,
+                "user": value.agent_rattache.user.id,
                 "secteur": value.agent_rattache.secteur_primaire,
                 "secteur_secondaire": value.agent_rattache.secteur_secondaire
             }
