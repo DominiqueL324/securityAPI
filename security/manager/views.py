@@ -1,5 +1,6 @@
 import email
 from email.message import EmailMessage
+from http import client
 from queue import Empty
 from unicodedata import name
 from urllib import request
@@ -213,13 +214,24 @@ class getAllUserApi(APIView):
 
         #recupération des non admin (role agent)
         if(request.GET.get("agent",None) is not None):
-            user = User.objects.filter(administrateur=None,is_staff=False)
+            usr = User.objects.none()
+            ag = Agent.objects.filter(agent_secteur=int(request.GET.get("agent")))
+            client = Client.objects.all()
+            final_ = []
+            for cl in client:
+                if cl.info_concession.agent_rattache.id == int(request.GET.get("agent")):
+                    final_.append(cl)
+            for a in ag:
+                usr = usr | User.objects.filter(pk=a.user.id)
+            for c in final_:
+                usr = usr | User.objects.filter(pk=c.user.id)
+            """user = User.objects.filter(administrateur=None,is_staff=False)
             final_ = User.objects.none()
             for us in user:
                 liste_ = us.groups.all()
                 if len(liste_)>=1:
-                    final_ = final_ | User.objects.filter(pk=us.id)
-            users = self.paginator.paginate_queryset(final_,request,view=self) 
+                    final_ = final_ | User.objects.filter(pk=us.id)"""
+            users = self.paginator.paginate_queryset(usr,request,view=self) 
             serialized = UserSerializer(users,many=True)
             return self.paginator.get_paginated_response(serialized.data)
 
@@ -229,13 +241,6 @@ class getAllUserApi(APIView):
             cl = Client.objects.filter(user=user.first().id)
             sal = Salarie.objects.filter(client=cl.first().id)
             user = User.objects.filter(salarie=sal.first())
-            #user = User.objects.filter(administrateur=None,is_staff=False,agent=None,client=None)
-            #final_ = User.objects.none()
-            #for us in user:
-                #liste_ = us.groups.all()
-                #if len(liste_)>=1:
-                    #sal = Salarie.objects.filter(client=Client.objects.filter(user=int))
-                    #final_ = final_ | User.objects.filter(salarie=sal.first().id)
             users = self.paginator.paginate_queryset(user,request,view=self) 
             serialized = UserSerializer(users,many=True)
             return self.paginator.get_paginated_response(serialized.data)
