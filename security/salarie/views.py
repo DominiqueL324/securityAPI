@@ -51,6 +51,12 @@ class SalarieApi(APIView):
                 return self.paginator.get_paginated_response(serializer.data)
             return JsonResponse({"status":"no client"},status=401)
 
+        if(request.GET.get("agent",None) is not None):
+            sala = Salarie.objects.filter(agent_rattache=Agent.objects.filter(pk=int(request.GET.get("agent",None))).first().id )
+            serializer = SalarieSerializer(sala,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+            
+
         if(request.GET.get("paginated",None) is not None):
             salarie = Salarie.objects.all()
             serializer = SalarieSerializer(salarie,many=True)

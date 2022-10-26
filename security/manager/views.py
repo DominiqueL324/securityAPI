@@ -280,7 +280,6 @@ class getSingleUser(APIView):
         return Response([{"status":"not found"}],status=status.HTTP_200_OK)
 
 
-
 class backupPwd(APIView):
     def get(self,request):
         email = request.GET.get("email",None)
@@ -299,5 +298,35 @@ class backupPwd(APIView):
         us.save()
         return Response({"pass":pwd},status=status.HTTP_200_OK)
 
+"""class TriView(APIView):
+    def get(self,request):
+
+        #filtre (requette)
+        query = Q()
+        #cas de groupe
+        if request.GET.get('role',None) is not None:
+            role_ = request.GET.get('role',None)
+            group = Group.objects.filter(name=role_)
+            query &= Q(group=group.first().id)
+ 
+        #cas etat
+        if(request.GET.get('etat',None) is not None):
+            role_ = int(request.GET.get('role',None))
+            query &= Q(is_active=role_)
+        
+        #cas d'un client
+        if(request.GET.get('client',None) is not None):
+            client = request.GET.get('client',None)
+            query &= Q(client=int(client))
+
+        #cas agent
+        if(request.GET.get('agent',None) is not None):
+            agent = request.GET.get('agent',None)
+            query &= Q(agent=int(agent))
+        
+        query_set=RendezVous.objects.filter(query)
+        page = self.paginator.paginate_queryset(query_set,request,view=self)
+        serializer = RendezVousSerializer(page,many=True)
+        return self.paginator.get_paginated_response(serializer.data)"""
 
 
