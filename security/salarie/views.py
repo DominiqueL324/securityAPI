@@ -103,12 +103,13 @@ class SalarieApi(APIView):
                 fonction =  data['fonction'],
                 telephone =  data['telephone'],
                 mobile =  data['mobile'],
-                code =  data['code'],
                 adresse =  data['adresse'],
                 client = Client.objects.filter(pk=int(data['client'])).first() 
             )
             if request.POST.get("agent",None) is not None:
                 salarie.agent_rattache = Agent.objects.filter(pk=int( data['agent'])).first()
+            if request.POST.get("code",None) is not None:
+                salarie.code = data['code']
                 salarie.save()
             salarie = Salarie.objects.filter(pk=salarie.id)
             serializer = SalarieSerializer(salarie,many=True)

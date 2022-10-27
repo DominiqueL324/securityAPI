@@ -47,6 +47,11 @@ class AgentApi(APIView):
         for ag in agent:
             if ag.user.groups.filter(name="Agent secteur").exists() or ag.user.groups.filter(name="Agent constat").exists() or ag.user.groups.filter(name="AUdit planneur").exists():
                 final_ = final_ | Agent.objects.filter(pk=ag.id)
+
+        if(request.GET.get("paginated",None) is not None):
+            serializer = AgentSerializer(final_,many=True)
+            return Response(serializer.data,status= status.HTTP_200_OK)
+    
         agent = self.paginator.paginate_queryset(final_,request,view=self)
         serializer = AgentSerializer(agent,many=True)
         return self.paginator.get_paginated_response(serializer.data)

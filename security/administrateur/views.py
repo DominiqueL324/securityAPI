@@ -24,7 +24,7 @@ from security.settings import *
 class AdministrateurApi(APIView):
 
     #authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated,]
+    #permission_classes = [IsAuthenticated,]
     pagination_class = PageNumberPagination
     paginator = pagination_class()
     def get(self,request): 

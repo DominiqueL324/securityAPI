@@ -20,7 +20,7 @@ from agent.models import Agent
 from agent.serializer import AgentSerializer
 from salarie.models import Salarie
 from salarie.serializer import SalarieSerializer
-from client.models import Client
+from client.models import Client,Concession
 from client.serializer import ClientSerializer
 from django.db import transaction, IntegrityError
 from django.contrib.auth.models import User, Group
@@ -77,12 +77,12 @@ class RoleManager(APIView):
                 boy = Agent.objects.filter(user=us)
                 serializer = AgentSerializer(boy,many=True)
                 user = User.objects.filter(is_staff=False,administrateur=None).count()
-                client = User.objects.filter(administrateur=None,agent=None,salarie=None,is_staff=False).count()
-                agent = User.objects.filter(administrateur=None,client=None,salarie=None,is_staff=False).count()
-                salarie = User.objects.filter(administrateur=None,client=None,agent=None,is_staff=False).count()
+                cn = Concession.objects.filter(agent_rattache=boy.first().id).count()
+                agent = Agent.objects.filter(agent_secteur=boy.first().id).count()
+                salarie = Salarie.objects.filter(agent_rattache=boy.first().id).count()
+
                 final_ = {
-                    "utilisateurs":user,
-                    "client":client,
+                    "client":cn,
                     "agent":agent,
                     "salarie":salarie
                 }
@@ -92,11 +92,12 @@ class RoleManager(APIView):
             
             if us.groups.filter(name="Agent constat").exists():
                 boy = Agent.objects.filter(user=us)
+                cn = Concession.objects.filter(agent_rattache=boy.first().id).count()
                 serializer = AgentSerializer(boy,many=True)
-                client = User.objects.filter(administrateur=None,agent=None,salarie=None,is_staff=False).count()
-                salarie = User.objects.filter(administrateur=None,client=None,agent=None,is_staff=False).count()
+                client = Client.objects.filter().count()
+                salarie = Salarie.objects.filter(agent_rattache=boy.first().id).count()
                 final_ = {
-                    "client":client,
+                    "client":cn,
                     "salarie":salarie
                 }
                 data = serializer.data
@@ -105,9 +106,12 @@ class RoleManager(APIView):
             
             if us.groups.filter(name="Audit planneur").exists():
                 boy = Agent.objects.filter(user=us)
+                cn = Concession.objects.filter(agent_rattache=boy.first().id).count()
+                salarie = Salarie.objects.filter(agent_rattache=boy.first().id).count()
                 serializer = AgentSerializer(boy,many=True)
                 final_ = {
-                    "client":0,
+                    "client":cn,
+                    "salarie":salarie
                 }
                 data = serializer.data
                 data[0]["stats"] = final_
@@ -298,35 +302,51 @@ class backupPwd(APIView):
         us.save()
         return Response({"pass":pwd},status=status.HTTP_200_OK)
 
-"""class TriView(APIView):
+class TriView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
+    paginator = pagination_class()
+
     def get(self,request):
 
+        users = User.objects.all()
+        groupe=""
+        etat=""
+        client=""
+        agent=""
+        criteres = {
+            "group":False,
+            "is_active":False,
+            "client":False,
+            "agent":False
+        }
         #filtre (requette)
         query = Q()
-        #cas de groupe
-        if request.GET.get('role',None) is not None:
-            role_ = request.GET.get('role',None)
-            group = Group.objects.filter(name=role_)
-            query &= Q(group=group.first().id)
- 
+        
+        r = 1
         #cas etat
         if(request.GET.get('etat',None) is not None):
-            role_ = int(request.GET.get('role',None))
-            query &= Q(is_active=role_)
+            statut_ = request.GET.get('etat',None)
+            query &= Q(is_active=int(statut_))
         
         #cas d'un client
         if(request.GET.get('client',None) is not None):
-            client = request.GET.get('client',None)
-            query &= Q(client=int(client))
+            statut_ = request.GET.get('client',None)
+            query &= Q(client=int(statut_))
 
         #cas agent
         if(request.GET.get('agent',None) is not None):
-            agent = request.GET.get('agent',None)
-            query &= Q(agent=int(agent))
+            statut_ = request.GET.get('agent',None)
+            query &= Q(client=int(statut_))
         
-        query_set=RendezVous.objects.filter(query)
+        #cas de groupe
+        if request.GET.get('role',None) is not None:
+            groupe = request.GET.get('role',None)
+            criteres['group']=True
+        
+        query_set=User.objects.filter(query)
         page = self.paginator.paginate_queryset(query_set,request,view=self)
-        serializer = RendezVousSerializer(page,many=True)
-        return self.paginator.get_paginated_response(serializer.data)"""
+        serializer = UserSerializer(page,many=True)
+        return self.paginator.get_paginated_response(serializer.data)
 
 
